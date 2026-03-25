@@ -9,7 +9,7 @@ from collections import deque
 
 
 # =============================================================================
-# [OPT-1] ZOBRIST HASHING
+# ZOBRIST HASHING
 # =============================================================================
 # Se genera una tabla de números aleatorios de 64 bits al importar el módulo.
 # Cada celda (r, c) tiene un número para cada posible valor (0=vacío, 1, 2).
@@ -62,9 +62,9 @@ class SmartPlayer(Player):
       2. Progressive widening
       3. RAVE
       4. Rollout guiado
-      [OPT-1] 5. Tabla de transposiciones con Zobrist hashing
-      [OPT-2] 6. Poda temprana tipo alpha-beta en la selección UCB+RAVE
-      [OPT-3] 7. Pesos estructurales (puentes, bordes, centro) en Dijkstra
+      5. Tabla de transposiciones con Zobrist hashing
+      6. Poda temprana tipo alpha-beta en la selección UCB+RAVE
+      7. Pesos estructurales (puentes, bordes, centro) en Dijkstra
     """
 
     def play(self, board: HexBoard) -> tuple:
@@ -112,7 +112,7 @@ class SmartPlayer(Player):
         return best.move
 
     # ─────────────────────────────────────────────────────────────────────
-    # SELECCIÓN — UCB1 + RAVE + poda [OPT-2]
+    # SELECCIÓN — UCB1 + RAVE + poda
     # ─────────────────────────────────────────────────────────────────────
 
     def _select(self, node: 'Node') -> 'Node':
@@ -122,7 +122,7 @@ class SmartPlayer(Player):
 
     def _best_ucb_rave(self, node: 'Node') -> 'Node':
         """
-        [OPT-2] Poda temprana sobre UCB1 + RAVE.
+        Poda temprana sobre UCB1 + RAVE.
 
         Para cada hijo calculamos una cota superior conservadora:
             upper_bound = 1.0 + C * sqrt(ln N / n_i)
@@ -165,12 +165,12 @@ class SmartPlayer(Player):
         return best_node
 
     # ─────────────────────────────────────────────────────────────────────
-    # EXPANSIÓN — progressive widening + transposiciones [OPT-1]
+    # EXPANSIÓN — progressive widening + transposiciones
     # ─────────────────────────────────────────────────────────────────────
 
     def _expand(self, node: 'Node') -> 'Node':
         """
-        [OPT-1] Antes de crear un nodo nuevo, consulta la tabla de
+        Antes de crear un nodo nuevo, consulta la tabla de
         transposiciones.  Si el estado resultante de aplicar `move` ya
         existe en otra rama del árbol, reutilizamos ese nodo:
           - Sus estadísticas (visits, wins) ya incluyen información de
@@ -206,7 +206,7 @@ class SmartPlayer(Player):
         h         = new_state.zobrist_hash   # O(1) gracias a hash incremental
         trans     = node.trans_table
 
-        # [OPT-1] ¿El estado ya existe en la tabla?
+        #  ¿El estado ya existe en la tabla?
         if h in trans:
             existing        = trans[h]
             # Redirigir parent al nodo actual para que la retropropagación
@@ -225,7 +225,7 @@ class SmartPlayer(Player):
         return child
 
     # ─────────────────────────────────────────────────────────────────────
-    # SIMULACIÓN — rollout guiado (sin cambios)
+    # SIMULACIÓN — rollout guiado
     # ─────────────────────────────────────────────────────────────────────
 
     def _simulate(self, node: 'Node') -> tuple:
@@ -252,7 +252,7 @@ class SmartPlayer(Player):
             current = 3 - current
 
     # ─────────────────────────────────────────────────────────────────────
-    # RETROPROPAGACIÓN — árbol + RAVE (sin cambios)
+    # RETROPROPAGACIÓN — árbol + RAVE 
     # ─────────────────────────────────────────────────────────────────────
 
     def _backpropagate(self, node: 'Node', winner: int,
@@ -270,13 +270,13 @@ class SmartPlayer(Player):
             node = node.parent
 
     # ─────────────────────────────────────────────────────────────────────
-    # [OPT-3] PESOS ESTRUCTURALES
+    # PESOS ESTRUCTURALES
     # ─────────────────────────────────────────────────────────────────────
 
     def _cell_weight(self, state: 'BoardState',
                      row: int, col: int, player: int) -> float:
         """
-        [OPT-3] Coste de traversal de una celda vacía para Dijkstra.
+        Coste de traversal de una celda vacía para Dijkstra.
         Valor base 1.0; se reduce si la celda es estratégicamente valiosa.
 
         Criterios (se aplica el descuento más bajo = más valioso):
@@ -335,7 +335,7 @@ class SmartPlayer(Player):
 
     def _min_path_distance(self, state: 'BoardState', player: int) -> float:
         """
-        [OPT-3] Dijkstra con pesos estructurales.
+        Dijkstra con pesos estructurales.
 
         Coste por celda:
           - Propia   → 0.0
@@ -416,7 +416,7 @@ class SmartPlayer(Player):
 
 
 # =============================================================================
-# Node — ahora con trans_table en __slots__ [OPT-1]
+# Node — ahora con trans_table en __slots__ 
 # =============================================================================
 
 class Node:
@@ -432,7 +432,7 @@ class Node:
         self.parent           = parent
         self.player_who_moved = player_who_moved
         self.rave_stats       = rave_stats
-        self.trans_table      = trans_table    # [OPT-1] referencia compartida
+        self.trans_table      = trans_table    # referencia compartida
         self.children         = []
         self.visits           = 0
         self.wins             = 0
@@ -459,20 +459,19 @@ class Node:
 
 
 # =============================================================================
-# BoardState — con Zobrist hash incremental [OPT-1]
+# BoardState — con Zobrist hash incremental
 # =============================================================================
 
 class BoardState:
     """
-    Tablero interno con hash Zobrist mantenido incrementalmente [OPT-1].
+    Tablero interno con hash Zobrist mantenido incrementalmente.
     Cada apply_move actualiza el hash en O(1) en vez de recalcular en O(N²).
     """
 
     def __init__(self, size: int, cells: list, zobrist_hash: int = 0):
         self.size         = size
         self.cells        = cells
-        self.zobrist_hash = zobrist_hash   # [OPT-1]
-
+        self.zobrist_hash = zobrist_hash   
     @classmethod
     def from_hexboard(cls, board: HexBoard) -> 'BoardState':
         N = board.size
@@ -480,11 +479,11 @@ class BoardState:
             cells = [[board.board[r][c] for c in range(N)] for r in range(N)]
         except AttributeError:
             cells = [[(board.cells[r][c] or 0) for c in range(N)] for r in range(N)]
-        h = _zobrist_hash_full(cells, N)   # [OPT-1] hash inicial
+        h = _zobrist_hash_full(cells, N)   # hash inicial
         return cls(N, cells, h)
 
     def clone(self) -> 'BoardState':
-        # [OPT-1] El clon hereda el hash actual; apply_move lo actualizará
+        # El clon hereda el hash actual; apply_move lo actualizará
         return BoardState(self.size, [row[:] for row in self.cells],
                           self.zobrist_hash)
 
@@ -498,7 +497,7 @@ class BoardState:
         return s
 
     def apply_move_inplace(self, move: tuple, player: int):
-        """Modifica en sitio y actualiza hash incrementalmente [OPT-1]."""
+        """Modifica en sitio y actualiza hash incrementalmente."""
         r, c    = move
         old_val = self.cells[r][c]
         self.cells[r][c]   = player
